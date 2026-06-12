@@ -102,6 +102,48 @@ class FinalizeResponse(BaseModel):
     guideId: str
 
 
+# ---------- editing: annotations, redactions, crop ----------
+
+
+class Annotation(BaseModel):
+    """One annotation op. Coordinates are 0..1 fractions of the ORIGINAL image.
+
+    rect/ellipse/text use (nx, ny, nw, nh) bounds; arrow uses (nx, ny) → (nx2, ny2).
+    """
+
+    id: str
+    kind: Literal["rect", "ellipse", "arrow", "text"]
+    nx: float = 0
+    ny: float = 0
+    nw: float = 0
+    nh: float = 0
+    nx2: float | None = None
+    ny2: float | None = None
+    text: str | None = None
+    color: str = "#FF5C35"
+
+
+class RedactionRect(BaseModel):
+    id: str
+    nx: float
+    ny: float
+    nw: float
+    nh: float
+
+
+class CropRect(BaseModel):
+    nx: float = Field(ge=0, le=1)
+    ny: float = Field(ge=0, le=1)
+    nw: float = Field(gt=0, le=1)
+    nh: float = Field(gt=0, le=1)
+
+
+class StepFlags(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    sensitive: list[str] = []
+
+
 # ---------- guides & steps (backend → web) ----------
 
 
@@ -121,11 +163,18 @@ class StepOut(BaseModel):
     id: str
     position: int
     screenshotId: str | None = None
+    screenshotWidth: int | None = None
+    screenshotHeight: int | None = None
+    redactedScreenshotId: str | None = None
     instructionText: str
     instructionOverridden: bool = False
     calloutType: CalloutType | None = None
     calloutText: str | None = None
     click: ClickPoint | None = None
+    annotations: list[Annotation] = []
+    redactions: list[RedactionRect] = []
+    crop: CropRect | None = None
+    flags: StepFlags = StepFlags()
     meta: StepMeta
 
 
@@ -153,17 +202,44 @@ class GuidePatch(BaseModel):
 
 
 class StepPatch(BaseModel):
-    """Partial update; only fields present in the request are applied."""
+    """Partial update; only fields present in the request are applied.
+
+    Sending `crop: null` clears the crop; `redactions: []` clears redactions
+    (and drops the derived redacted image); `flags` replaces flags (send
+    `{"sensitive": []}` to dismiss a sensitive-data warning).
+    """
 
     instructionText: str | None = None
     calloutType: CalloutType | None = None
     calloutText: str | None = None
     click: ClickPoint | None = None
     clearCallout: bool = False
+    annotations: list[Annotation] | None = None
+    redactions: list[RedactionRect] | None = None
+    crop: CropRect | None = None
+    flags: StepFlags | None = None
 
 
 class ReorderRequest(BaseModel):
     stepIds: list[str]
+
+
+class MergeRequest(BaseModel):
+    """Merge the second step into the first; both must belong to the guide."""
+
+    stepIds: list[str] = Field(min_length=2, max_length=2)
+
+
+# ---------- workspace settings / branding ----------
+
+
+class SettingsOut(BaseModel):
+    markerColor: str
+    hasLogo: bool
+
+
+class SettingsPatch(BaseModel):
+    markerColor: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
 
 
 class RegenerateRequest(BaseModel):

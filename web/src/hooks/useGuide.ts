@@ -1,12 +1,17 @@
-import type { GuideOut } from "@sops/shared";
+import type { Annotation, ClickPoint, CropRect, GuideOut, RedactionRect } from "@sops/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { client } from "../api/client";
 
-type StepPatchBody = {
+export type StepPatchBody = {
   instructionText?: string;
   calloutType?: "info" | "warning" | "caution";
   calloutText?: string;
   clearCallout: boolean;
+  click?: ClickPoint;
+  annotations?: Annotation[] | null;
+  redactions?: RedactionRect[] | null;
+  crop?: CropRect | null;
+  flags?: { sensitive: string[] };
 };
 
 function fail(error: unknown): never {
@@ -121,6 +126,53 @@ export function useDeleteStep(guideId: string) {
         params: { path: { guide_id: guideId, step_id: stepId } },
       });
       if (error) fail(error);
+    },
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["guides", guideId], exact: true }),
+  });
+}
+
+export function useDuplicateStep(guideId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (stepId: string) => {
+      const { data, error } = await client.POST(
+        "/api/guides/{guide_id}/steps/{step_id}:duplicate",
+        { params: { path: { guide_id: guideId, step_id: stepId } } },
+      );
+      if (error) fail(error);
+      return data!;
+    },
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["guides", guideId], exact: true }),
+  });
+}
+
+export function useSplitStep(guideId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (stepId: string) => {
+      const { data, error } = await client.POST("/api/guides/{guide_id}/steps/{step_id}:split", {
+        params: { path: { guide_id: guideId, step_id: stepId } },
+      });
+      if (error) fail(error);
+      return data!;
+    },
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["guides", guideId], exact: true }),
+  });
+}
+
+export function useMergeSteps(guideId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (stepIds: [string, string]) => {
+      const { data, error } = await client.POST("/api/guides/{guide_id}/steps:merge", {
+        params: { path: { guide_id: guideId } },
+        body: { stepIds },
+      });
+      if (error) fail(error);
+      return data!;
     },
     onSuccess: () =>
       void queryClient.invalidateQueries({ queryKey: ["guides", guideId], exact: true }),

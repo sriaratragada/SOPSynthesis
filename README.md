@@ -60,8 +60,16 @@ Then in Chrome/Edge: `chrome://extensions` → enable Developer mode → **Load 
 1. With the backend running, click the extension icon. The health dot should be green.
 2. Click **Start recording**, perform your workflow (clicks and typing are captured,
    across page loads and domains), then click **Stop**.
-3. A new tab opens to the generated guide in the web app. Edit step text inline,
-   drag to reorder, delete steps, regenerate descriptions, or export to Markdown.
+3. A new tab opens to the generated guide in the web app. Edit step text inline
+   (rich text: bold, italic, links), drag to reorder, duplicate/split/merge
+   steps, add callouts, regenerate descriptions, or export to Markdown.
+4. Hover a screenshot and click **Edit screenshot** to open the editor: draw
+   arrows/boxes/ellipses/text, drag the click target, crop, and blur sensitive
+   regions (blurs are pixelated server-side into a derived image — the original
+   is kept, so blurring is always undoable). Steps whose captured text looks
+   like an email, SSN, or card number are flagged for review automatically.
+5. **Settings** lets you set the marker color and upload a workspace logo;
+   both apply to the viewer and to exported images.
 
 ## Regenerating API types
 

@@ -26,7 +26,7 @@ def list_guides(db: Session = Depends(get_db)) -> list[GuideSummary]:
 
 @router.get("/{guide_id}", response_model=GuideOut)
 def get_guide(guide_id: str, db: Session = Depends(get_db)) -> GuideOut:
-    return guide_out(get_guide_or_404(guide_id, db))
+    return guide_out(get_guide_or_404(guide_id, db), db)
 
 
 @router.patch("/{guide_id}", response_model=GuideOut)
@@ -38,7 +38,7 @@ def patch_guide(guide_id: str, body: GuidePatch, db: Session = Depends(get_db)) 
         guide.description = body.description
     guide.updated_at = utcnow()
     db.commit()
-    return guide_out(guide)
+    return guide_out(guide, db)
 
 
 @router.delete("/{guide_id}", status_code=204)
@@ -56,8 +56,13 @@ def delete_guide(guide_id: str, db: Session = Depends(get_db)) -> None:
 
 
 def _collect_orphan_screenshots(db: Session) -> None:
-    referenced = select(Step.screenshot_id).where(Step.screenshot_id.is_not(None)).union(
-        select(Event.screenshot_id).where(Event.screenshot_id.is_not(None))
+    referenced = (
+        select(Step.screenshot_id)
+        .where(Step.screenshot_id.is_not(None))
+        .union(
+            select(Step.redacted_screenshot_id).where(Step.redacted_screenshot_id.is_not(None)),
+            select(Event.screenshot_id).where(Event.screenshot_id.is_not(None)),
+        )
     )
     orphans = db.scalars(select(Screenshot).where(Screenshot.id.not_in(referenced))).all()
     for shot in orphans:

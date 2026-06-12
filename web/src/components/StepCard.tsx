@@ -1,9 +1,20 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { StepOut } from "@sops/shared";
-import { useEffect, useState } from "react";
-import { useDeleteStep, usePatchStep, useRegenerateStep } from "../hooks/useGuide";
+import { lazy, Suspense, useState } from "react";
+import {
+  useDeleteStep,
+  useDuplicateStep,
+  useMergeSteps,
+  usePatchStep,
+  useRegenerateStep,
+  useSplitStep,
+} from "../hooks/useGuide";
+import InstructionEditor from "./InstructionEditor";
 import StepScreenshot from "./StepScreenshot";
+
+// Konva is heavy; only load the editor when someone opens it.
+const ScreenshotEditor = lazy(() => import("./ScreenshotEditor"));
 
 const CALLOUT_STYLES: Record<string, string> = {
   info: "border-sky-300 bg-sky-50 text-sky-900",
@@ -11,14 +22,22 @@ const CALLOUT_STYLES: Record<string, string> = {
   caution: "border-red-300 bg-red-50 text-red-900",
 };
 
+const SENSITIVE_LABELS: Record<string, string> = {
+  email: "an email address",
+  ssn: "an SSN",
+  card: "a card number",
+};
+
 export default function StepCard({
   guideId,
   step,
   index,
+  nextStepId,
 }: {
   guideId: string;
   step: StepOut;
   index: number;
+  nextStepId: string | null;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: step.id,
@@ -26,18 +45,19 @@ export default function StepCard({
   const patchStep = usePatchStep(guideId);
   const deleteStep = useDeleteStep(guideId);
   const regenerate = useRegenerateStep(guideId);
+  const duplicate = useDuplicateStep(guideId);
+  const split = useSplitStep(guideId);
+  const merge = useMergeSteps(guideId);
 
-  const [draft, setDraft] = useState(step.instructionText);
   const [editingCallout, setEditingCallout] = useState(false);
-  useEffect(() => setDraft(step.instructionText), [step.instructionText]);
+  const [editingScreenshot, setEditingScreenshot] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const saveInstruction = () => {
-    const trimmed = draft.trim();
-    if (trimmed && trimmed !== step.instructionText) {
-      patchStep.mutate({ stepId: step.id, body: { instructionText: trimmed, clearCallout: false } });
-    } else {
-      setDraft(step.instructionText);
-    }
+  const sensitive = step.flags.sensitive ?? [];
+
+  const menuAction = (fn: () => void) => () => {
+    setMenuOpen(false);
+    fn();
   };
 
   return (
@@ -57,22 +77,24 @@ export default function StepCard({
         >
           ⠿
         </button>
-        <span className="mt-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">
+        <span
+          className="mt-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+          style={{ background: "var(--marker-color, #FF5C35)" }}
+        >
           {index + 1}
         </span>
-        <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={saveInstruction}
-          rows={Math.max(1, Math.ceil(draft.length / 70))}
-          className="min-w-0 flex-1 resize-none rounded-md border border-transparent px-2 py-1.5 text-[15px] leading-snug hover:border-zinc-200 focus:border-brand focus:outline-none"
+
+        <InstructionEditor
+          value={step.instructionText}
+          onSave={(html) =>
+            patchStep.mutate({ stepId: step.id, body: { instructionText: html, clearCallout: false } })
+          }
         />
-        <div className="flex shrink-0 gap-1 text-sm">
+
+        <div className="relative flex shrink-0 gap-1 text-sm">
           <button
             title={step.instructionOverridden ? "Restore generated text" : "Regenerate text"}
-            onClick={() =>
-              regenerate.mutate({ stepId: step.id, force: step.instructionOverridden })
-            }
+            onClick={() => regenerate.mutate({ stepId: step.id, force: step.instructionOverridden })}
             className="rounded p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
           >
             ↻
@@ -85,14 +107,65 @@ export default function StepCard({
             ✎
           </button>
           <button
+            title="More actions"
+            onClick={() => setMenuOpen((v) => !v)}
+            className="rounded p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+          >
+            ⋯
+          </button>
+          <button
             title="Delete step"
             onClick={() => deleteStep.mutate(step.id)}
             className="rounded p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-600"
           >
             ✕
           </button>
+          {menuOpen && (
+            <div className="absolute top-9 right-0 z-20 w-44 rounded-lg border border-zinc-200 bg-white py-1 text-sm shadow-lg">
+              {step.screenshotId && (
+                <MenuItem onClick={menuAction(() => setEditingScreenshot(true))}>
+                  Edit screenshot
+                </MenuItem>
+              )}
+              <MenuItem onClick={menuAction(() => duplicate.mutate(step.id))}>Duplicate</MenuItem>
+              <MenuItem onClick={menuAction(() => split.mutate(step.id))}>Split in two</MenuItem>
+              {nextStepId && (
+                <MenuItem onClick={menuAction(() => merge.mutate([step.id, nextStepId]))}>
+                  Merge with next
+                </MenuItem>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+      {sensitive.length > 0 && (
+        <div className="mt-3 ml-10 flex flex-wrap items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <span>
+            ⚠️ This step may contain {sensitive.map((s) => SENSITIVE_LABELS[s] ?? s).join(", ")} —
+            review and blur if needed.
+          </span>
+          {step.screenshotId && (
+            <button
+              onClick={() => setEditingScreenshot(true)}
+              className="rounded border border-amber-400 px-2 py-0.5 text-xs font-medium hover:bg-amber-100"
+            >
+              Open editor
+            </button>
+          )}
+          <button
+            onClick={() =>
+              patchStep.mutate({
+                stepId: step.id,
+                body: { flags: { sensitive: [] }, clearCallout: false },
+              })
+            }
+            className="rounded px-2 py-0.5 text-xs hover:bg-amber-100"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {(step.calloutType || editingCallout) && (
         <CalloutEditor
@@ -104,11 +177,35 @@ export default function StepCard({
       )}
 
       {step.screenshotId && (
-        <div className="mt-3 pl-10">
-          <StepScreenshot screenshotId={step.screenshotId} click={step.click} />
+        <div className="group/shot relative mt-3 pl-10">
+          <StepScreenshot step={step} />
+          <button
+            onClick={() => setEditingScreenshot(true)}
+            className="absolute top-2 right-2 rounded-md bg-white/90 px-2 py-1 text-xs font-medium opacity-0 shadow transition group-hover/shot:opacity-100"
+          >
+            ✎ Edit screenshot
+          </button>
         </div>
       )}
+
+      {editingScreenshot && (
+        <Suspense fallback={null}>
+          <ScreenshotEditor
+            guideId={guideId}
+            step={step}
+            onClose={() => setEditingScreenshot(false)}
+          />
+        </Suspense>
+      )}
     </li>
+  );
+}
+
+function MenuItem({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick} className="block w-full px-3 py-1.5 text-left hover:bg-zinc-50">
+      {children}
+    </button>
   );
 }
 

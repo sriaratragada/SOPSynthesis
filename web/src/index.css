@@ -3,3 +3,18 @@
 @theme {
   --color-brand: #ff5c35;
 }
+
+/* TipTap instruction content */
+.tiptap-instruction p {
+  margin: 0;
+}
+.tiptap-instruction p + p {
+  margin-top: 0.4rem;
+}
+.tiptap-instruction a {
+  color: var(--color-brand);
+  text-decoration: underline;
+}
+.tiptap-instruction:focus {
+  outline: none;
+}

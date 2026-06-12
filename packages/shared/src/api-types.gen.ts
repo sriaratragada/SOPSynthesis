@@ -177,6 +177,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/guides/{guide_id}/steps/{step_id}:duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Duplicate Step */
+        post: operations["duplicate_step_api_guides__guide_id__steps__step_id__duplicate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guides/{guide_id}/steps/{step_id}:split": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Split Step
+         * @description Split into two steps sharing the same screenshot; the new step gets a
+         *     placeholder instruction to describe the second part of the action.
+         */
+        post: operations["split_step_api_guides__guide_id__steps__step_id__split_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/guides/{guide_id}/steps:merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge Steps
+         * @description Merge two steps: the earlier one keeps its screenshot and visuals; the
+         *     later one contributes its instruction text (and callout, if the first has
+         *     none), then is deleted.
+         */
+        post: operations["merge_steps_api_guides__guide_id__steps_merge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/screenshots/{screenshot_id}": {
         parameters: {
             query?: never;
@@ -211,10 +271,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Settings */
+        get: operations["read_settings_api_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Settings */
+        patch: operations["patch_settings_api_settings_patch"];
+        trace?: never;
+    };
+    "/api/settings/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Logo */
+        get: operations["get_logo_api_settings_logo_get"];
+        put?: never;
+        /** Upload Logo */
+        post: operations["upload_logo_api_settings_logo_post"];
+        /** Delete Logo */
+        delete: operations["delete_logo_api_settings_logo_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * Annotation
+         * @description One annotation op. Coordinates are 0..1 fractions of the ORIGINAL image.
+         *
+         *     rect/ellipse/text use (nx, ny, nw, nh) bounds; arrow uses (nx, ny) → (nx2, ny2).
+         */
+        Annotation: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "rect" | "ellipse" | "arrow" | "text";
+            /**
+             * Nx
+             * @default 0
+             */
+            nx: number;
+            /**
+             * Ny
+             * @default 0
+             */
+            ny: number;
+            /**
+             * Nw
+             * @default 0
+             */
+            nw: number;
+            /**
+             * Nh
+             * @default 0
+             */
+            nh: number;
+            /** Nx2 */
+            nx2?: number | null;
+            /** Ny2 */
+            ny2?: number | null;
+            /** Text */
+            text?: string | null;
+            /**
+             * Color
+             * @default #FF5C35
+             */
+            color: string;
+        };
         /**
          * BBox
          * @description Element bounding box, normalized to the viewport (0..1 fractions).
@@ -236,6 +379,11 @@ export interface components {
             /** Screenshot */
             screenshot?: string | null;
         };
+        /** Body_upload_logo_api_settings_logo_post */
+        Body_upload_logo_api_settings_logo_post: {
+            /** Logo */
+            logo: string;
+        };
         /**
          * ClickPoint
          * @description Click position as viewport fractions; raw client coords kept for forensics.
@@ -250,6 +398,17 @@ export interface components {
             /** Clienty */
             clientY?: number | null;
             bbox?: components["schemas"]["BBox"] | null;
+        };
+        /** CropRect */
+        CropRect: {
+            /** Nx */
+            nx: number;
+            /** Ny */
+            ny: number;
+            /** Nw */
+            nw: number;
+            /** Nh */
+            nh: number;
         };
         /** ElementMeta */
         ElementMeta: {
@@ -364,6 +523,14 @@ export interface components {
              */
             version: string;
         };
+        /**
+         * MergeRequest
+         * @description Merge the second step into the first; both must belong to the guide.
+         */
+        MergeRequest: {
+            /** Stepids */
+            stepIds: string[];
+        };
         /** RecordingCreated */
         RecordingCreated: {
             /** Id */
@@ -390,6 +557,19 @@ export interface components {
             /** Guideid */
             guideId?: string | null;
         };
+        /** RedactionRect */
+        RedactionRect: {
+            /** Id */
+            id: string;
+            /** Nx */
+            nx: number;
+            /** Ny */
+            ny: number;
+            /** Nw */
+            nw: number;
+            /** Nh */
+            nh: number;
+        };
         /** RegenerateRequest */
         RegenerateRequest: {
             /**
@@ -402,6 +582,28 @@ export interface components {
         ReorderRequest: {
             /** Stepids */
             stepIds: string[];
+        };
+        /** SettingsOut */
+        SettingsOut: {
+            /** Markercolor */
+            markerColor: string;
+            /** Haslogo */
+            hasLogo: boolean;
+        };
+        /** SettingsPatch */
+        SettingsPatch: {
+            /** Markercolor */
+            markerColor?: string | null;
+        };
+        /** StepFlags */
+        StepFlags: {
+            /**
+             * Sensitive
+             * @default []
+             */
+            sensitive: string[];
+        } & {
+            [key: string]: unknown;
         };
         /** StepMeta */
         StepMeta: {
@@ -431,6 +633,12 @@ export interface components {
             position: number;
             /** Screenshotid */
             screenshotId?: string | null;
+            /** Screenshotwidth */
+            screenshotWidth?: number | null;
+            /** Screenshotheight */
+            screenshotHeight?: number | null;
+            /** Redactedscreenshotid */
+            redactedScreenshotId?: string | null;
             /** Instructiontext */
             instructionText: string;
             /**
@@ -443,11 +651,32 @@ export interface components {
             /** Callouttext */
             calloutText?: string | null;
             click?: components["schemas"]["ClickPoint"] | null;
+            /**
+             * Annotations
+             * @default []
+             */
+            annotations: components["schemas"]["Annotation"][];
+            /**
+             * Redactions
+             * @default []
+             */
+            redactions: components["schemas"]["RedactionRect"][];
+            crop?: components["schemas"]["CropRect"] | null;
+            /**
+             * @default {
+             *       "sensitive": []
+             *     }
+             */
+            flags: components["schemas"]["StepFlags"];
             meta: components["schemas"]["StepMeta"];
         };
         /**
          * StepPatch
          * @description Partial update; only fields present in the request are applied.
+         *
+         *     Sending `crop: null` clears the crop; `redactions: []` clears redactions
+         *     (and drops the derived redacted image); `flags` replaces flags (send
+         *     `{"sensitive": []}` to dismiss a sensitive-data warning).
          */
         StepPatch: {
             /** Instructiontext */
@@ -462,6 +691,12 @@ export interface components {
              * @default false
              */
             clearCallout: boolean;
+            /** Annotations */
+            annotations?: components["schemas"]["Annotation"][] | null;
+            /** Redactions */
+            redactions?: components["schemas"]["RedactionRect"][] | null;
+            crop?: components["schemas"]["CropRect"] | null;
+            flags?: components["schemas"]["StepFlags"] | null;
         };
         /** TypedValue */
         TypedValue: {
@@ -887,6 +1122,105 @@ export interface operations {
             };
         };
     };
+    duplicate_step_api_guides__guide_id__steps__step_id__duplicate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guide_id: string;
+                step_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StepOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    split_step_api_guides__guide_id__steps__step_id__split_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guide_id: string;
+                step_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StepOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    merge_steps_api_guides__guide_id__steps_merge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guide_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StepOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_screenshot_api_screenshots__screenshot_id__get: {
         parameters: {
             query?: never;
@@ -945,6 +1279,132 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_settings_api_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+        };
+    };
+    patch_settings_api_settings_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingsPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_logo_api_settings_logo_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    upload_logo_api_settings_logo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_logo_api_settings_logo_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_logo_api_settings_logo_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsOut"];
                 };
             };
         };

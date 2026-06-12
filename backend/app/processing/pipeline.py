@@ -8,12 +8,14 @@ from pydantic import BaseModel
 from ..schemas import CaptureEvent
 from .dedup import dedup_events
 from .generator.base import DescriptionGenerator, RecordingMeta, StepContext, pick_label
+from .sensitive import scan_for_sensitive
 
 
 class StepDraft(BaseModel):
     instruction_text: str
     screenshot_id: str | None = None
     click: dict | None = None
+    flags: dict = {}
     meta: dict
 
 
@@ -66,11 +68,17 @@ def build_guide(
             # that focused the field.
             screenshot_id = last_screenshot
 
+        sensitive = scan_for_sensitive(
+            ev.element.text if ev.element else None,
+            ev.element.ariaLabel if ev.element else None,
+            ctx.typed.value if ctx.typed else None,
+        )
         steps.append(
             StepDraft(
                 instruction_text=generator.step_instruction(ctx),
                 screenshot_id=screenshot_id,
                 click=ev.click.model_dump() if ev.click else None,
+                flags={"sensitive": sensitive} if sensitive else {},
                 meta={
                     "url": ev.url,
                     "ts": ev.ts,

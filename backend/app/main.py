@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .db import init_db
-from .routers import exports, guides, recordings, screenshots, steps
+from .routers import exports, guides, recordings, screenshots, settings, steps
 from .schemas import HealthResponse
 
 
@@ -34,3 +34,4 @@ app.include_router(guides.router)
 app.include_router(steps.router)
 app.include_router(screenshots.router)
 app.include_router(exports.router)
+app.include_router(settings.router)

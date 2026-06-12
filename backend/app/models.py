@@ -87,5 +87,21 @@ class Step(Base):
     callout_text: Mapped[str | None] = mapped_column(Text, default=None)
     click: Mapped[dict | None] = mapped_column(JSON, default=None)
     meta: Mapped[dict] = mapped_column(JSON, default=dict)
+    # Phase 2 editing state — all coordinates normalized 0..1 to the ORIGINAL image
+    annotations: Mapped[list] = mapped_column(JSON, default=list)
+    redactions: Mapped[list] = mapped_column(JSON, default=list)
+    crop: Mapped[dict | None] = mapped_column(JSON, default=None)
+    # Derived image with redactions pixelated in; the original stays untouched for undo.
+    redacted_screenshot_id: Mapped[str | None] = mapped_column(
+        ForeignKey("screenshots.id"), default=None
+    )
+    flags: Mapped[dict] = mapped_column(JSON, default=dict)
 
     guide: Mapped[Guide] = relationship(back_populates="steps")
+
+
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(Text, primary_key=True)
+    value: Mapped[dict] = mapped_column(JSON, default=dict)

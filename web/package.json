@@ -15,10 +15,17 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@sops/shared": "*",
     "@tanstack/react-query": "^5.62.16",
+    "@tiptap/extension-link": "^3.26.1",
+    "@tiptap/pm": "^3.26.1",
+    "@tiptap/react": "^3.26.1",
+    "@tiptap/starter-kit": "^3.26.1",
+    "konva": "^10.3.0",
     "openapi-fetch": "^0.13.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.1.1"
+    "react-konva": "^19.2.5",
+    "react-router-dom": "^7.1.1",
+    "use-image": "^1.1.4"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",

@@ -130,6 +130,7 @@ def finalize_recording(recording_id: str, db: Session = Depends(get_db)) -> Fina
                 screenshot_id=step.screenshot_id,
                 instruction_text=step.instruction_text,
                 click=step.click,
+                flags=step.flags,
                 meta=step.meta,
             )
         )

@@ -36,7 +36,13 @@ export default function StepList({ guide }: { guide: GuideOut }) {
       <SortableContext items={stepIds} strategy={verticalListSortingStrategy}>
         <ol className="flex flex-col gap-4">
           {guide.steps.map((step, index) => (
-            <StepCard key={step.id} guideId={guide.id} step={step} index={index} />
+            <StepCard
+              key={step.id}
+              guideId={guide.id}
+              step={step}
+              index={index}
+              nextStepId={guide.steps[index + 1]?.id ?? null}
+            />
           ))}
         </ol>
       </SortableContext>
