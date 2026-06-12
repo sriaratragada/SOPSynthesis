@@ -12,7 +12,24 @@ const statusElapsed = document.getElementById("status-elapsed")!;
 const statusLast = document.getElementById("status-last")!;
 const warnQueue = document.getElementById("warn-queue")!;
 const warnCapture = document.getElementById("warn-capture")!;
+const warnPage = document.getElementById("warn-page")!;
+const warnStart = document.getElementById("warn-start")!;
 const errorBox = document.getElementById("error")!;
+
+document.getElementById("version")!.textContent = `v${chrome.runtime.getManifest().version}`;
+
+// Mirrors the service worker's recordability rules — pages where capture is
+// impossible (browser UI) or deliberately excluded (the SOPSynthesis app itself).
+function pageWarning(url: string | undefined): string | null {
+  if (!url) return null;
+  if (!/^https?:\/\//.test(url)) {
+    return "⚠️ This page can't be recorded — browser and extension pages aren't capturable. Switch to a regular website.";
+  }
+  if (url.startsWith("http://localhost:5173") || url.startsWith("http://127.0.0.1:8787")) {
+    return "⚠️ The SOPSynthesis app itself is excluded from recording. Switch to the site you want to document.";
+  }
+  return null;
+}
 
 let status: SessionSnapshot["status"] = "idle";
 let pollTimer: number | undefined;
@@ -85,14 +102,26 @@ function render(state: SessionSnapshot, healthy: boolean): void {
 }
 
 async function refresh(): Promise<void> {
-  const [state, healthy] = await Promise.all([
+  const [state, healthy, [activeTab]] = await Promise.all([
     chrome.runtime.sendMessage({ kind: "GET_STATE" }) as Promise<SessionSnapshot>,
     checkHealth(),
+    chrome.tabs.query({ active: true, currentWindow: true }),
   ]);
   healthDot.className = `dot ${healthy ? "up" : "down"}`;
   healthText.textContent = healthy
     ? "Backend connected"
     : "Backend offline — start the local server";
+
+  const pageWarn = pageWarning(activeTab?.url);
+  warnPage.textContent = pageWarn ?? "";
+  warnPage.classList.toggle("visible", !!pageWarn);
+
+  warnStart.textContent = state.startWarning ? `⚠️ ${state.startWarning}` : "";
+  warnStart.classList.toggle(
+    "visible",
+    !!state.startWarning && (state.status === "recording" || state.status === "paused"),
+  );
+
   render(state, healthy);
 }
 

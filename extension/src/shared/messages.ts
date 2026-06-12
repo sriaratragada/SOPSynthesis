@@ -17,6 +17,8 @@ export interface SessionSnapshot {
   lastCaptureError: string | null;
   /** When the pre-recording countdown finishes (status === "countdown"). */
   countdownEndsAt: number | null;
+  /** Problem detected while attaching to tabs at Start (e.g. blocked site access). */
+  startWarning: string | null;
   /** When the current pause began (status === "paused"). */
   pausedAt: number | null;
   /** Total time spent paused so far — subtracted from the elapsed timer. */

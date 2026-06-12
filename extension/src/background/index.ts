@@ -18,8 +18,11 @@ import {
   finalizeRecording,
   flushQueue,
   getQueueLength,
+  recordingIsOpen,
   uploadEvent,
 } from "./uploader";
+
+const START_WARNING_KEY = "startWarning";
 
 const WEB_APP_URL = "http://localhost:5173";
 const COUNTDOWN_MS = 3000;
@@ -35,10 +38,12 @@ function isRecordableUrl(url: string): boolean {
 }
 
 async function buildSnapshot(state: SessionState): Promise<SessionSnapshot> {
+  const stored = await chrome.storage.session.get(START_WARNING_KEY);
   return {
     ...snapshotBase(state),
     queuedCount: await getQueueLength(),
     lastCaptureError: await getLastCaptureError(),
+    startWarning: (stored[START_WARNING_KEY] as string | undefined) ?? null,
   };
 }
 
@@ -96,16 +101,33 @@ async function broadcast(message: BroadcastMessage): Promise<void> {
  * content script — clicks there would capture nothing. Inject into every
  * eligible open tab when recording starts; the script's own guard makes
  * double-injection a no-op.
+ *
+ * Injection failing on the tab the user is looking at is THE classic cause of
+ * "nothing records" (usually Site access set to "On click"), so that failure
+ * is reported back for the popup to surface.
  */
-async function injectIntoOpenTabs(): Promise<void> {
+async function injectIntoOpenTabs(): Promise<{ activeTabError: string | null }> {
   const tabs = await chrome.tabs.query({});
-  await Promise.allSettled(
+  const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
+  let activeTabError: string | null = null;
+
+  await Promise.all(
     tabs
       .filter((tab) => tab.id !== undefined && tab.url && isRecordableUrl(tab.url))
-      .map((tab) =>
-        chrome.scripting.executeScript({ target: { tabId: tab.id! }, files: ["content.js"] }),
-      ),
+      .map(async (tab) => {
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id! },
+            files: ["content.js"],
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.warn(`content script injection failed for ${tab.url}: ${message}`);
+          if (tab.id === active?.id) activeTabError = message;
+        }
+      }),
   );
+  return { activeTabError };
 }
 
 async function handlePageEvent(event: PageEvent, sender: chrome.runtime.MessageSender) {
@@ -163,8 +185,25 @@ async function handleNavigation(tabId: number, url: string): Promise<void> {
 }
 
 async function startRecording(): Promise<StartResponse> {
-  const state = await getState();
-  if (state.status !== "idle") return { ok: true, state: await buildSnapshot(state) };
+  let state = await getState();
+
+  // Self-heal stuck sessions: a "recording" whose backend recording is gone
+  // (backend restarted, DB cleared, or a crash mid-finalize) would otherwise
+  // make Start a silent no-op forever.
+  if (state.status === "recording" || state.status === "paused") {
+    if (state.recordingId && (await recordingIsOpen(state.recordingId))) {
+      return { ok: true, state: await buildSnapshot(state) };
+    }
+    console.warn("resetting stale session — backend no longer has the recording open");
+    await setState(IDLE);
+    await setIndicator("idle");
+    await broadcast({ kind: "RECORDING_STOPPED" });
+    state = IDLE;
+  } else if (state.status !== "idle") {
+    // countdown/finalizing left over from a dead service worker
+    await setState(IDLE);
+    state = IDLE;
+  }
 
   if (!(await checkHealth())) {
     return {
@@ -175,7 +214,15 @@ async function startRecording(): Promise<StartResponse> {
   }
 
   await clearCaptureError();
-  await injectIntoOpenTabs();
+  await chrome.storage.session.remove(START_WARNING_KEY);
+  const { activeTabError } = await injectIntoOpenTabs();
+  if (activeTabError) {
+    await chrome.storage.session.set({
+      [START_WARNING_KEY]:
+        "Couldn't attach to the current page. Check that Site access is set to " +
+        '"On all sites" for SOPSynthesis at chrome://extensions, then reload the tab.',
+    });
+  }
 
   // 3-2-1 countdown: nothing is recorded until it finishes, so closing the
   // popup or settling into the page doesn't become step 1.

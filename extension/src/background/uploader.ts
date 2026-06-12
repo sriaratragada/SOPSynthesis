@@ -35,6 +35,19 @@ export async function finalizeRecording(recordingId: string): Promise<string> {
   return ((await res.json()) as { guideId: string }).guideId;
 }
 
+/** True if the backend still has this recording open for events. */
+export async function recordingIsOpen(recordingId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/recordings/${recordingId}`, {
+      signal: AbortSignal.timeout(1500),
+    });
+    if (!res.ok) return false;
+    return ((await res.json()) as { status: string }).status === "recording";
+  } catch {
+    return false;
+  }
+}
+
 function dataUrlToBlob(dataUrl: string): Blob {
   const [header, base64] = dataUrl.split(",");
   const mime = header.match(/data:(.*?);/)?.[1] ?? "image/png";

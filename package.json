@@ -11,9 +11,11 @@
     "gen:types": "node scripts/gen-types.mjs",
     "dev:web": "npm run dev -w web",
     "build:web": "npm run build -w web",
-    "build:ext": "npm run build -w extension"
+    "build:ext": "npm run build -w extension",
+    "e2e:ext": "node scripts/e2e-extension.mjs"
   },
   "devDependencies": {
-    "openapi-typescript": "^7.6.1"
+    "openapi-typescript": "^7.6.1",
+    "puppeteer-core": "^25.1.0"
   }
 }

@@ -152,6 +152,23 @@ Click **Settings** (gear icon) to customize:
 
 ## Troubleshooting
 
+### Recording captures nothing (no steps, no screenshots)
+Work through these in order — the popup now diagnoses most of them for you:
+
+1. **Stale build**: the popup footer shows the running version (e.g. `v0.2.0`).
+   After any rebuild (`npm run build:ext`), click the reload (↻) button on the
+   extension at `chrome://extensions` — Chrome does not pick up new builds
+   automatically.
+2. **Site access**: at `chrome://extensions`, open SOPSynthesis → Details →
+   set **Site access** to **"On all sites"**. With "On click", Chrome blocks
+   both capture and screenshots; the popup shows a warning if it detects this
+   when you press Start.
+3. **Non-recordable page**: browser pages (`chrome://…`, the Web Store, the
+   new-tab page) and the SOPSynthesis app itself cannot be recorded. The popup
+   shows "This page can't be recorded" when your current tab is one of these.
+4. Run the automated end-to-end check to prove the pipeline works on your
+   machine: `npm run e2e:ext` (requires the backend running; uses Edge).
+
 ### Red dot in the extension popup
 - The backend is not running. Start it in Terminal 1 (`cd backend; .venv\Scripts\python -m uvicorn app.main:app --port 8787`).
 
