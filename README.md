@@ -16,6 +16,12 @@ recording into an editable step-by-step guide you can view, edit, and export.
 Everything runs on your machine. No accounts, no cloud. Guides live in `data/`
 (SQLite metadata + content-addressed PNGs).
 
+## Documentation
+
+- **[Getting Started](docs/getting-started.md)** — A plain-English guide for new users: how to install, set up, record your first guide, edit steps, and export.
+- **[Architecture](docs/architecture.md)** — For developers: system overview, data flow, API endpoints, the normalized-coordinates invariant, and the roadmap.
+- **[Event Contract](docs/event-contract.md)** — Technical specification for the capture event JSON schema and transport protocol.
+
 ## Dev setup (three terminals)
 
 ### 0. One-time setup
