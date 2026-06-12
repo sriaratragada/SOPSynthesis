@@ -19,6 +19,11 @@ export interface SessionState {
   countdownEndsAt: number | null;
   pausedAt: number | null;
   pausedAccumMs: number;
+  /** Last navigation URL recorded — collapses SPA history-update spam. */
+  lastNavUrl: string | null;
+  /** Navigations recorded this session — used to detect "pages change but no
+   * clicks arrive", the signature of Chrome blocking the content script. */
+  navCount: number;
 }
 
 export const IDLE: SessionState = {
@@ -32,6 +37,8 @@ export const IDLE: SessionState = {
   countdownEndsAt: null,
   pausedAt: null,
   pausedAccumMs: 0,
+  lastNavUrl: null,
+  navCount: 0,
 };
 
 export async function getState(): Promise<SessionState> {

@@ -191,7 +191,71 @@ async function main() {
     if (missingShots.length > 0) {
       throw new Error(`${missingShots.length}/${clickSteps.length} click steps lack screenshots`);
     }
-    log("harness", "E2E PASS ✅  steps and screenshots recorded correctly");
+    log("harness", "phase 1 PASS ✅  fresh-install recording works");
+
+    // ---- phase 2: EXTENSION RELOAD with the page kept open ----
+    // This is the real-world path: user reloads the extension at
+    // chrome://extensions while tabs stay open, then records. The page now
+    // hosts an orphaned content script from the previous extension lifetime.
+    log("harness", "phase 2: reloading extension without reloading the page…");
+    await sw.evaluate(() => chrome.runtime.reload());
+    const swTarget2 = await browser.waitForTarget(
+      (t) =>
+        t.type() === "service_worker" &&
+        t.url().includes("background.js") &&
+        t !== swTarget,
+      { timeout: 15000 },
+    );
+    const sw2 = await swTarget2.worker();
+    sw2.on("console", (msg) => log("sw2", `${msg.type()}: ${msg.text()}`));
+    await sleep(1500);
+
+    const guidesMid = await fetch(`${API}/guides`).then((r) => r.json());
+
+    // old popup page died with the old extension process — open a fresh one
+    const popup2 = await browser.newPage();
+    popup2.on("console", (msg) => log("popup2", `${msg.type()}: ${msg.text()}`));
+    await popup2.goto(`chrome-extension://${extensionId}/popup.html`, { waitUntil: "load" });
+    await popup2.waitForFunction(() => !document.getElementById("toggle")?.disabled, {
+      timeout: 5000,
+    });
+    await popup2.click("#toggle");
+    await page.bringToFront();
+    await sleep(4200);
+
+    await page.click("#confirm");
+    await sleep(900);
+    await page.click("#confirm");
+    await sleep(900);
+
+    const state3 = await popup2.evaluate(
+      async () => await chrome.runtime.sendMessage({ kind: "GET_STATE" }),
+    );
+    log("harness", `phase 2 state after clicks: ${JSON.stringify(state3)}`);
+
+    await popup2.bringToFront();
+    await popup2.click("#toggle");
+    await sleep(2500);
+
+    const guidesEnd = await fetch(`${API}/guides`).then((r) => r.json());
+    const phase2Guides = guidesEnd.filter((g) => !guidesMid.some((b) => b.id === g.id));
+    if (phase2Guides.length === 0) throw new Error("phase 2: no guide created");
+    const guide2 = await fetch(`${API}/guides/${phase2Guides[0].id}`).then((r) => r.json());
+    const clicks2 = guide2.steps.filter((s) => s.meta?.eventType === "click");
+    log("harness", `phase 2 guide has ${guide2.steps.length} steps (${clicks2.length} clicks)`);
+    for (const s of guide2.steps) {
+      log(
+        "harness",
+        `  ${s.position + 1}. ${s.instructionText} [shot=${s.screenshotId ? "yes" : "NO"}]`,
+      );
+    }
+    if (clicks2.length < 1 || clicks2.some((s) => !s.screenshotId)) {
+      throw new Error(
+        "phase 2 FAIL: clicks after an extension reload were not captured " +
+          "(orphaned content-script takeover is broken)",
+      );
+    }
+    log("harness", "E2E PASS ✅  fresh install AND post-reload recording both work");
   } finally {
     await browser.close();
     server.close();

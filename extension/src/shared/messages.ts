@@ -19,6 +19,8 @@ export interface SessionSnapshot {
   countdownEndsAt: number | null;
   /** Problem detected while attaching to tabs at Start (e.g. blocked site access). */
   startWarning: string | null;
+  /** Number of pages with an armed (capturing) content script this session. */
+  armedTabCount: number;
   /** When the current pause began (status === "paused"). */
   pausedAt: number | null;
   /** Total time spent paused so far — subtracted from the elapsed timer. */
@@ -28,6 +30,7 @@ export interface SessionSnapshot {
 /** Messages into the service worker (from content scripts and the popup). */
 export type InboundMessage =
   | { kind: "PAGE_EVENT"; event: PageEvent }
+  | { kind: "CS_ARMED" } // a content script confirms it is live and capturing
   | { kind: "GET_STATE" }
   | { kind: "START_RECORDING" }
   | { kind: "STOP_RECORDING" }

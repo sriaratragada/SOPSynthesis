@@ -23,6 +23,24 @@ import {
 } from "./uploader";
 
 const START_WARNING_KEY = "startWarning";
+const ARMED_TABS_KEY = "armedTabs";
+
+const SITE_ACCESS_HINT =
+  "Pages are changing but no clicks are being captured. Chrome is likely " +
+  "blocking the extension on this site — set Site access to \"On all sites\" at " +
+  "chrome://extensions, then reload the tab.";
+
+async function getArmedTabs(): Promise<number[]> {
+  const stored = await chrome.storage.session.get(ARMED_TABS_KEY);
+  return (stored[ARMED_TABS_KEY] as number[] | undefined) ?? [];
+}
+
+async function markTabArmed(tabId: number): Promise<void> {
+  const tabs = await getArmedTabs();
+  if (!tabs.includes(tabId)) {
+    await chrome.storage.session.set({ [ARMED_TABS_KEY]: [...tabs, tabId] });
+  }
+}
 
 const WEB_APP_URL = "http://localhost:5173";
 const COUNTDOWN_MS = 3000;
@@ -39,11 +57,18 @@ function isRecordableUrl(url: string): boolean {
 
 async function buildSnapshot(state: SessionState): Promise<SessionSnapshot> {
   const stored = await chrome.storage.session.get(START_WARNING_KEY);
+  let startWarning = (stored[START_WARNING_KEY] as string | undefined) ?? null;
+  // The signature of blocked site access: the SW sees pages changing while
+  // not a single click has been captured.
+  if (!startWarning && state.status === "recording" && state.stepCount === 0 && state.navCount >= 3) {
+    startWarning = SITE_ACCESS_HINT;
+  }
   return {
     ...snapshotBase(state),
     queuedCount: await getQueueLength(),
     lastCaptureError: await getLastCaptureError(),
-    startWarning: (stored[START_WARNING_KEY] as string | undefined) ?? null,
+    startWarning,
+    armedTabCount: (await getArmedTabs()).length,
   };
 }
 
@@ -159,6 +184,9 @@ async function handleNavigation(tabId: number, url: string): Promise<void> {
   await serialized(async () => {
     const state = await getState();
     if (state.status !== "recording" || !state.recordingId) return;
+    // SPAs (LinkedIn, Gmail, …) fire history updates constantly; identical
+    // consecutive URLs are noise, not steps.
+    if (url === state.lastNavUrl) return;
 
     let pageTitle = "";
     try {
@@ -179,6 +207,8 @@ async function handleNavigation(tabId: number, url: string): Promise<void> {
       ...state,
       seq: state.seq + 1,
       lastTabTitle: pageTitle || state.lastTabTitle,
+      lastNavUrl: url,
+      navCount: state.navCount + 1,
     });
     await uploadEvent(state.recordingId, capture, null);
   });
@@ -215,6 +245,7 @@ async function startRecording(): Promise<StartResponse> {
 
   await clearCaptureError();
   await chrome.storage.session.remove(START_WARNING_KEY);
+  await chrome.storage.session.remove(ARMED_TABS_KEY);
   const { activeTabError } = await injectIntoOpenTabs();
   if (activeTabError) {
     await chrome.storage.session.set({
@@ -268,6 +299,8 @@ async function startRecording(): Promise<StartResponse> {
     countdownEndsAt: null,
     pausedAt: null,
     pausedAccumMs: 0,
+    lastNavUrl: null,
+    navCount: 0,
   };
   await setState(next);
   await setIndicator("recording");
@@ -346,6 +379,9 @@ chrome.runtime.onMessage.addListener(
       case "PAGE_EVENT":
         void handlePageEvent(message.event, sender);
         return undefined; // fire and forget
+      case "CS_ARMED":
+        if (sender.tab?.id !== undefined) void markTabArmed(sender.tab.id);
+        return undefined;
       case "GET_STATE":
         void getState()
           .then(buildSnapshot)
@@ -384,6 +420,29 @@ chrome.commands.onCommand.addListener((command) => {
 chrome.webNavigation.onCommitted.addListener((details) => {
   if (details.frameId !== 0) return;
   void handleNavigation(details.tabId, details.url);
+});
+
+// A tab that was asleep/discarded when recording started has no content
+// script; inject when the user switches to it. Idempotent — the script's
+// guard makes repeats a no-op.
+chrome.tabs.onActivated.addListener((info) => {
+  void (async () => {
+    const state = await getState();
+    if (state.status !== "recording" && state.status !== "paused") return;
+    try {
+      const tab = await chrome.tabs.get(info.tabId);
+      if (!tab.url || !isRecordableUrl(tab.url)) return;
+      await chrome.scripting.executeScript({
+        target: { tabId: info.tabId },
+        files: ["content.js"],
+      });
+      await chrome.tabs.sendMessage(info.tabId, {
+        kind: state.status === "paused" ? "RECORDING_PAUSED" : "RECORDING_STARTED",
+      });
+    } catch {
+      // injection blocked (site access) — the stall heuristic will surface it
+    }
+  })();
 });
 
 chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {

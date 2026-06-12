@@ -192,11 +192,20 @@ function main(): void {
   }
 
   function arm(): void {
+    const firstArm = !armed;
     armed = true;
     hideCountdown();
     if (!pillHost || pillHost.getAttribute("data-mode") !== "recording") {
       showPill("recording");
       pillHost?.setAttribute("data-mode", "recording");
+    }
+    if (firstArm) {
+      // Confirm liveness so the popup can show how many pages are capturing.
+      try {
+        chrome.runtime.sendMessage({ kind: "CS_ARMED" }).catch(() => {});
+      } catch {
+        /* orphaned */
+      }
     }
   }
 

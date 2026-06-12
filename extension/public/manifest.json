@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SOPSynthesis Recorder",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Record clicks and typing into step-by-step SOP guides, processed by your local SOPSynthesis backend.",
   "permissions": ["tabs", "scripting", "storage", "webNavigation", "activeTab"],
   "host_permissions": ["<all_urls>"],

@@ -85,7 +85,8 @@ function render(state: SessionSnapshot, healthy: boolean): void {
     statusTab.title = state.lastTabTitle ?? "";
     statusSteps.textContent = String(state.stepCount);
     statusElapsed.textContent = formatElapsed(state);
-    statusLast.textContent = state.lastAction ? `Last: ${state.lastAction}` : "";
+    const attached = `Attached to ${state.armedTabCount} page${state.armedTabCount === 1 ? "" : "s"}`;
+    statusLast.textContent = state.lastAction ? `Last: ${state.lastAction} · ${attached}` : attached;
   }
 
   const queued = state.queuedCount;
