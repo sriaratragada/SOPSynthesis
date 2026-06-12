@@ -76,13 +76,30 @@ You should see the SOPSynthesis extension icon in your toolbar.
 
 1. **Check the health indicator**: Click the SOPSynthesis extension icon. You should see a **green dot**. If it's red, the backend is not running—go back to Terminal 1.
 
-2. **Start recording**: Click **Start recording** in the popup.
+2. **Start recording**: Click **Start recording** in the popup. A 3-2-1 countdown
+   appears on the page — capture begins when it finishes, so closing the popup and
+   getting settled isn't recorded as step 1. (Click the button again during the
+   countdown to cancel.)
 
 3. **Perform your task**: Use the website or application normally. Click buttons, type into forms, navigate between pages—SOPSynthesis captures it all. You can move across different domains; the extension maintains context.
 
-4. **Stop recording**: Click **Stop** in the extension popup.
+4. **While recording**:
+   - The toolbar icon turns **red with a REC badge**, and a floating
+     **"Recording" pill** appears in the bottom-right corner of every page with
+     Pause and Stop buttons. Clicks on the pill itself are never captured.
+   - **Pause** any time (pill button, popup button, or `Alt+Shift+P`) to do
+     something off the record — the pill turns amber and says "Paused", and
+     nothing is captured until you Resume. The elapsed timer excludes paused time.
+   - The popup shows what's being captured: **Recording: {tab name}**, steps
+     captured, elapsed time, and the last action (e.g. *Last: Clicked "Approve"*).
 
-5. **View your guide**: A new browser tab opens showing your newly generated guide. It appears as a list of steps, each with an annotated screenshot and automatically-generated descriptive text.
+5. **Keyboard shortcuts**: `Alt+Shift+S` starts/stops recording and `Alt+Shift+P`
+   pauses/resumes — no need to open the popup. Customize them at
+   `chrome://extensions/shortcuts`.
+
+6. **Stop recording**: Click **Stop** in the extension popup, on the floating pill, or press `Alt+Shift+S`.
+
+7. **View your guide**: A new browser tab opens showing your newly generated guide. It appears as a list of steps, each with an annotated screenshot and automatically-generated descriptive text.
 
 ## Editing Your Guide
 

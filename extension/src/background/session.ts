@@ -1,6 +1,8 @@
 // Recording session state machine. All state lives in chrome.storage.session so it
 // survives MV3 service-worker teardown (and correctly dies with the browser).
 // Handlers must rehydrate on every call — the SW itself is stateless.
+//
+// States: idle → countdown → recording ⇄ paused → finalizing → idle
 
 import type { SessionStatus } from "../shared/messages";
 
@@ -14,6 +16,9 @@ export interface SessionState {
   startedAt: number | null;
   lastTabTitle: string | null;
   lastAction: string | null;
+  countdownEndsAt: number | null;
+  pausedAt: number | null;
+  pausedAccumMs: number;
 }
 
 export const IDLE: SessionState = {
@@ -24,6 +29,9 @@ export const IDLE: SessionState = {
   startedAt: null,
   lastTabTitle: null,
   lastAction: null,
+  countdownEndsAt: null,
+  pausedAt: null,
+  pausedAccumMs: 0,
 };
 
 export async function getState(): Promise<SessionState> {
@@ -44,6 +52,9 @@ export function snapshotBase(state: SessionState) {
     startedAt: state.startedAt,
     lastTabTitle: state.lastTabTitle,
     lastAction: state.lastAction,
+    countdownEndsAt: state.countdownEndsAt,
+    pausedAt: state.pausedAt,
+    pausedAccumMs: state.pausedAccumMs,
   };
 }
 

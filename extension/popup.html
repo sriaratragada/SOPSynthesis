@@ -39,8 +39,12 @@
       .dot.down { background: var(--danger); }
       .dot.rec { background: var(--danger); animation: pulse 1.2s ease-in-out infinite; }
       @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
-      button#toggle {
-        width: 100%;
+      .controls {
+        display: flex;
+        gap: 8px;
+      }
+      .controls button {
+        flex: 1;
         padding: 10px;
         border: none;
         border-radius: 8px;
@@ -50,11 +54,19 @@
         background: var(--accent);
         cursor: pointer;
       }
-      button#toggle:disabled {
+      .controls button:disabled {
         opacity: 0.5;
         cursor: not-allowed;
       }
-      button#toggle.stop { background: var(--danger); }
+      .controls button.stop { background: var(--danger); }
+      .controls button.pause { background: #b45309; }
+      .controls button.hidden { display: none; }
+      .hotkeys {
+        margin-top: 10px;
+        font-size: 11px;
+        text-align: center;
+        opacity: 0.6;
+      }
       .status {
         margin-bottom: 12px;
         padding: 10px;
@@ -124,7 +136,11 @@
       <div id="status-last" class="last-action"></div>
     </div>
 
-    <button id="toggle" disabled>Start recording</button>
+    <div class="controls">
+      <button id="pause" class="pause hidden">Pause</button>
+      <button id="toggle" disabled>Start recording</button>
+    </div>
+    <div class="hotkeys">Alt+Shift+S start/stop &nbsp;·&nbsp; Alt+Shift+P pause</div>
 
     <div id="warn-queue" class="warn"></div>
     <div id="warn-capture" class="warn"></div>

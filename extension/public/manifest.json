@@ -17,6 +17,16 @@
       "all_frames": false
     }
   ],
+  "commands": {
+    "toggle-recording": {
+      "suggested_key": { "default": "Alt+Shift+S" },
+      "description": "Start or stop recording"
+    },
+    "toggle-pause": {
+      "suggested_key": { "default": "Alt+Shift+P" },
+      "description": "Pause or resume recording"
+    }
+  },
   "action": {
     "default_popup": "popup.html",
     "default_title": "SOPSynthesis Recorder",
