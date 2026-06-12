@@ -1,19 +1,21 @@
-// Service worker entry: message routing, navigation tracking, badge state.
+// Service worker entry: message routing, navigation tracking, badge/icon state.
 
 import type {
   BroadcastMessage,
   InboundMessage,
+  SessionSnapshot,
   StartResponse,
   StopResponse,
 } from "../shared/messages";
 import type { CaptureEvent, PageEvent } from "../shared/types";
-import { captureTab } from "./capture";
-import { getState, IDLE, serialized, setState, snapshot } from "./session";
+import { captureTab, clearCaptureError, getLastCaptureError } from "./capture";
+import { getState, IDLE, serialized, setState, snapshotBase, type SessionState } from "./session";
 import {
   checkHealth,
   createRecording,
   finalizeRecording,
   flushQueue,
+  getQueueLength,
   uploadEvent,
 } from "./uploader";
 
@@ -27,9 +29,37 @@ function isRecordableUrl(url: string): boolean {
   return !IGNORED_URL_PREFIXES.some((prefix) => url.startsWith(prefix));
 }
 
-async function setBadge(recording: boolean): Promise<void> {
+async function buildSnapshot(state: SessionState): Promise<SessionSnapshot> {
+  return {
+    ...snapshotBase(state),
+    queuedCount: await getQueueLength(),
+    lastCaptureError: await getLastCaptureError(),
+  };
+}
+
+const ICONS_DEFAULT = { 16: "icons/icon16.png", 48: "icons/icon48.png", 128: "icons/icon128.png" };
+const ICONS_RECORDING = { 16: "icons/rec16.png", 48: "icons/rec48.png", 128: "icons/rec128.png" };
+
+async function setRecordingIndicator(recording: boolean): Promise<void> {
+  await chrome.action.setIcon({ path: recording ? ICONS_RECORDING : ICONS_DEFAULT });
   await chrome.action.setBadgeText({ text: recording ? "REC" : "" });
   if (recording) await chrome.action.setBadgeBackgroundColor({ color: "#D93025" });
+}
+
+/** Quick human label for the popup's "last action" line. */
+function summarizeAction(event: PageEvent): string {
+  const el = event.element;
+  const label =
+    el?.ariaLabel?.trim() || el?.text?.trim() || el?.placeholder?.trim() || el?.tag || "element";
+  const short = label.length > 40 ? `${label.slice(0, 39)}…` : label;
+  if (event.type === "click") return `Clicked "${short}"`;
+  if (event.type === "type")
+    return event.typed?.masked ? "Typed a password (masked)" : `Typed in "${short}"`;
+  try {
+    return `Opened ${new URL(event.url).host}`;
+  } catch {
+    return "Navigated";
+  }
 }
 
 async function broadcast(message: BroadcastMessage): Promise<void> {
@@ -38,6 +68,24 @@ async function broadcast(message: BroadcastMessage): Promise<void> {
     tabs
       .filter((tab) => tab.id !== undefined && tab.url && isRecordableUrl(tab.url))
       .map((tab) => chrome.tabs.sendMessage(tab.id!, message)),
+  );
+}
+
+/**
+ * Manifest-declared content scripts only land in pages loaded AFTER the
+ * extension was installed/reloaded. Tabs that were already open have no
+ * content script — clicks there would capture nothing. Inject into every
+ * eligible open tab when recording starts; the script's own guard makes
+ * double-injection a no-op.
+ */
+async function injectIntoOpenTabs(): Promise<void> {
+  const tabs = await chrome.tabs.query({});
+  await Promise.allSettled(
+    tabs
+      .filter((tab) => tab.id !== undefined && tab.url && isRecordableUrl(tab.url))
+      .map((tab) =>
+        chrome.scripting.executeScript({ target: { tabId: tab.id! }, files: ["content.js"] }),
+      ),
   );
 }
 
@@ -58,6 +106,8 @@ async function handlePageEvent(event: PageEvent, sender: chrome.runtime.MessageS
       ...state,
       seq: state.seq + 1,
       stepCount: state.stepCount + 1,
+      lastTabTitle: event.pageTitle || state.lastTabTitle,
+      lastAction: summarizeAction(event),
     });
     await uploadEvent(state.recordingId, capture, screenshot);
   });
@@ -84,35 +134,47 @@ async function handleNavigation(tabId: number, url: string): Promise<void> {
       seq: state.seq,
       tabId,
     };
-    await setState({ ...state, seq: state.seq + 1 });
+    await setState({
+      ...state,
+      seq: state.seq + 1,
+      lastTabTitle: pageTitle || state.lastTabTitle,
+    });
     await uploadEvent(state.recordingId, capture, null);
   });
 }
 
 async function startRecording(): Promise<StartResponse> {
   const state = await getState();
-  if (state.status === "recording") return { ok: true, state: snapshot(state) };
+  if (state.status === "recording") return { ok: true, state: await buildSnapshot(state) };
 
   if (!(await checkHealth())) {
     return {
       ok: false,
-      state: snapshot(IDLE),
+      state: await buildSnapshot(IDLE),
       error: "Backend is not running on 127.0.0.1:8787 — start it, then try again.",
     };
   }
 
+  await clearCaptureError();
   const recordingId = await createRecording();
-  const next = {
-    status: "recording" as const,
+
+  // Seed "Recording: {tab}" with the tab the user is on right now.
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+  const next: SessionState = {
+    status: "recording",
     recordingId,
     seq: 0,
     stepCount: 0,
     startedAt: Date.now(),
+    lastTabTitle: activeTab?.title ?? null,
+    lastAction: null,
   };
   await setState(next);
-  await setBadge(true);
+  await setRecordingIndicator(true);
+  await injectIntoOpenTabs();
   await broadcast({ kind: "RECORDING_STARTED" });
-  return { ok: true, state: snapshot(next) };
+  return { ok: true, state: await buildSnapshot(next) };
 }
 
 async function stopRecording(): Promise<StopResponse> {
@@ -128,12 +190,13 @@ async function stopRecording(): Promise<StopResponse> {
     if (!flushed) throw new Error("Some captured events could not reach the backend");
     const guideId = await finalizeRecording(state.recordingId);
     await setState(IDLE);
-    await setBadge(false);
+    await setRecordingIndicator(false);
     await chrome.tabs.create({ url: `${WEB_APP_URL}/guides/${guideId}` });
     return { ok: true, guideId };
   } catch (err) {
     // Keep the session so a retry after restarting the backend can still finalize.
     await setState({ ...state, status: "recording" });
+    await broadcast({ kind: "RECORDING_STARTED" });
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
@@ -145,7 +208,9 @@ chrome.runtime.onMessage.addListener(
         void handlePageEvent(message.event, sender);
         return undefined; // fire and forget
       case "GET_STATE":
-        void getState().then((state) => sendResponse(snapshot(state)));
+        void getState()
+          .then(buildSnapshot)
+          .then((snapshot) => sendResponse(snapshot));
         return true;
       case "START_RECORDING":
         void startRecording().then(sendResponse);
@@ -167,5 +232,5 @@ chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
   void handleNavigation(details.tabId, details.url);
 });
 
-// Restore the badge if the SW restarts mid-recording.
-void getState().then((state) => setBadge(state.status === "recording"));
+// Restore the indicator if the SW restarts mid-recording.
+void getState().then((state) => setRecordingIndicator(state.status === "recording"));

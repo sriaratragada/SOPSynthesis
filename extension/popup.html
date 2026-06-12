@@ -10,7 +10,7 @@
         --danger: #d93025;
       }
       body {
-        width: 260px;
+        width: 280px;
         margin: 0;
         padding: 16px;
         font-family: system-ui, sans-serif;
@@ -33,10 +33,13 @@
         height: 8px;
         border-radius: 50%;
         background: #999;
+        flex-shrink: 0;
       }
       .dot.up { background: #1e8e3e; }
       .dot.down { background: var(--danger); }
-      button {
+      .dot.rec { background: var(--danger); animation: pulse 1.2s ease-in-out infinite; }
+      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+      button#toggle {
         width: 100%;
         padding: 10px;
         border: none;
@@ -47,17 +50,55 @@
         background: var(--accent);
         cursor: pointer;
       }
-      button:disabled {
+      button#toggle:disabled {
         opacity: 0.5;
         cursor: not-allowed;
       }
-      button.stop { background: var(--danger); }
-      .counter {
-        margin-top: 10px;
+      button#toggle.stop { background: var(--danger); }
+      .status {
+        margin-bottom: 12px;
+        padding: 10px;
+        border-radius: 8px;
+        background: rgba(217, 48, 37, 0.08);
         font-size: 12px;
-        text-align: center;
-        opacity: 0.85;
+        display: none;
       }
+      .status.visible { display: block; }
+      .status .target {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .status .target span:last-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .status .row {
+        display: flex;
+        justify-content: space-between;
+        opacity: 0.85;
+        margin-top: 3px;
+      }
+      .status .last-action {
+        margin-top: 6px;
+        opacity: 0.7;
+        font-style: italic;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .warn {
+        margin-top: 10px;
+        padding: 8px;
+        border-radius: 6px;
+        background: rgba(245, 158, 11, 0.15);
+        font-size: 12px;
+        display: none;
+      }
+      .warn.visible { display: block; }
       .error {
         margin-top: 10px;
         font-size: 12px;
@@ -72,8 +113,21 @@
       <span id="health-dot" class="dot"></span>
       <span id="health-text">Checking backend…</span>
     </div>
+
+    <div id="status" class="status">
+      <div class="target">
+        <span class="dot rec"></span>
+        <span id="status-tab">Recording</span>
+      </div>
+      <div class="row"><span>Steps captured</span><b id="status-steps">0</b></div>
+      <div class="row"><span>Elapsed</span><b id="status-elapsed">0:00</b></div>
+      <div id="status-last" class="last-action"></div>
+    </div>
+
     <button id="toggle" disabled>Start recording</button>
-    <div id="counter" class="counter hidden"></div>
+
+    <div id="warn-queue" class="warn"></div>
+    <div id="warn-capture" class="warn"></div>
     <div id="error" class="error hidden"></div>
     <script type="module" src="/src/popup/main.ts"></script>
   </body>

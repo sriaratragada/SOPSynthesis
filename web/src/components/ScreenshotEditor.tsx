@@ -23,7 +23,7 @@ import useImage from "use-image";
 import { screenshotUrl } from "../api/client";
 import { usePatchStep } from "../hooks/useGuide";
 
-type Tool = "select" | "target" | "arrow" | "rect" | "ellipse" | "text" | "blur" | "crop";
+export type Tool = "select" | "target" | "arrow" | "rect" | "ellipse" | "text" | "blur" | "crop";
 type Selected = { kind: "annotation" | "redaction"; id: string } | null;
 
 const COLORS = ["#FF5C35", "#2563EB", "#16A34A", "#DC2626", "#111827"];
@@ -44,15 +44,17 @@ export default function ScreenshotEditor({
   guideId,
   step,
   onClose,
+  initialTool = "select",
 }: {
   guideId: string;
   step: StepOut;
   onClose: () => void;
+  initialTool?: Tool;
 }) {
   const patchStep = usePatchStep(guideId);
   const [image] = useImage(step.screenshotId ? screenshotUrl(step.screenshotId) : "");
 
-  const [tool, setTool] = useState<Tool>("select");
+  const [tool, setTool] = useState<Tool>(initialTool);
   const [color, setColor] = useState(COLORS[0]);
   const [annotations, setAnnotations] = useState<Annotation[]>(step.annotations);
   const [redactions, setRedactions] = useState<RedactionRect[]>(step.redactions);

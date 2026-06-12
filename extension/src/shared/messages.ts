@@ -6,6 +6,15 @@ export interface SessionSnapshot {
   status: SessionStatus;
   recordingId: string | null;
   stepCount: number;
+  startedAt: number | null;
+  /** Title of the tab the last event was captured in. */
+  lastTabTitle: string | null;
+  /** Human summary of the last captured action, e.g. `Clicked "Approve"`. */
+  lastAction: string | null;
+  /** Events waiting in the retry queue (backend unreachable). */
+  queuedCount: number;
+  /** Last screenshot-capture failure, if any — surfaced in the popup. */
+  lastCaptureError: string | null;
 }
 
 /** Messages into the service worker (from content scripts and the popup). */

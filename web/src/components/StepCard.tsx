@@ -50,7 +50,7 @@ export default function StepCard({
   const merge = useMergeSteps(guideId);
 
   const [editingCallout, setEditingCallout] = useState(false);
-  const [editingScreenshot, setEditingScreenshot] = useState(false);
+  const [editorTool, setEditorTool] = useState<"select" | "blur" | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const sensitive = step.flags.sensitive ?? [];
@@ -123,8 +123,13 @@ export default function StepCard({
           {menuOpen && (
             <div className="absolute top-9 right-0 z-20 w-44 rounded-lg border border-zinc-200 bg-white py-1 text-sm shadow-lg">
               {step.screenshotId && (
-                <MenuItem onClick={menuAction(() => setEditingScreenshot(true))}>
+                <MenuItem onClick={menuAction(() => setEditorTool("select"))}>
                   Edit screenshot
+                </MenuItem>
+              )}
+              {step.screenshotId && (
+                <MenuItem onClick={menuAction(() => setEditorTool("blur"))}>
+                  Blur a region
                 </MenuItem>
               )}
               <MenuItem onClick={menuAction(() => duplicate.mutate(step.id))}>Duplicate</MenuItem>
@@ -147,10 +152,10 @@ export default function StepCard({
           </span>
           {step.screenshotId && (
             <button
-              onClick={() => setEditingScreenshot(true)}
+              onClick={() => setEditorTool("blur")}
               className="rounded border border-amber-400 px-2 py-0.5 text-xs font-medium hover:bg-amber-100"
             >
-              Open editor
+              Blur it
             </button>
           )}
           <button
@@ -179,21 +184,31 @@ export default function StepCard({
       {step.screenshotId && (
         <div className="group/shot relative mt-3 pl-10">
           <StepScreenshot step={step} />
-          <button
-            onClick={() => setEditingScreenshot(true)}
-            className="absolute top-2 right-2 rounded-md bg-white/90 px-2 py-1 text-xs font-medium opacity-0 shadow transition group-hover/shot:opacity-100"
-          >
-            ✎ Edit screenshot
-          </button>
+          <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition group-hover/shot:opacity-100">
+            <button
+              onClick={() => setEditorTool("select")}
+              className="rounded-md bg-white/90 px-2 py-1 text-xs font-medium shadow"
+            >
+              ✎ Edit screenshot
+            </button>
+            <button
+              onClick={() => setEditorTool("blur")}
+              title="Blur sensitive parts of this screenshot"
+              className="rounded-md bg-white/90 px-2 py-1 text-xs font-medium shadow"
+            >
+              ▒ Blur
+            </button>
+          </div>
         </div>
       )}
 
-      {editingScreenshot && (
+      {editorTool && (
         <Suspense fallback={null}>
           <ScreenshotEditor
             guideId={guideId}
             step={step}
-            onClose={() => setEditingScreenshot(false)}
+            initialTool={editorTool}
+            onClose={() => setEditorTool(null)}
           />
         </Suspense>
       )}

@@ -60,6 +60,10 @@ async function getQueue(): Promise<QueuedUpload[]> {
   return (stored[QUEUE_KEY] as QueuedUpload[] | undefined) ?? [];
 }
 
+export async function getQueueLength(): Promise<number> {
+  return (await getQueue()).length;
+}
+
 async function setQueue(queue: QueuedUpload[]): Promise<void> {
   await chrome.storage.session.set({ [QUEUE_KEY]: queue });
 }

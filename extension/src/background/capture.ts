@@ -1,14 +1,25 @@
 // Throttled screenshot capture. Chrome rate-limits captureVisibleTab to ~2/sec;
 // a token-interval throttle plus a short-lived per-tab cache makes burst clicks
 // degrade to a shared frame instead of throwing (dedup collapses them anyway).
+// Failures are recorded so the popup can surface "screenshots are failing".
 
 const MIN_INTERVAL_MS = 600;
 const CACHE_MAX_AGE_MS = 700;
+const ERROR_KEY = "lastCaptureError";
 
 let lastFrame: { tabId: number; dataUrl: string; ts: number } | null = null;
 let lastCaptureAt = 0;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export async function getLastCaptureError(): Promise<string | null> {
+  const stored = await chrome.storage.session.get(ERROR_KEY);
+  return (stored[ERROR_KEY] as string | undefined) ?? null;
+}
+
+export async function clearCaptureError(): Promise<void> {
+  await chrome.storage.session.remove(ERROR_KEY);
+}
 
 export async function captureTab(windowId: number, tabId: number): Promise<string | null> {
   const now = Date.now();
@@ -29,9 +40,12 @@ export async function captureTab(windowId: number, tabId: number): Promise<strin
   try {
     const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: "png" });
     lastFrame = { tabId, dataUrl, ts: Date.now() };
+    await chrome.storage.session.remove(ERROR_KEY);
     return dataUrl;
   } catch (err) {
-    console.warn("captureVisibleTab failed:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn("captureVisibleTab failed:", message);
+    await chrome.storage.session.set({ [ERROR_KEY]: message });
     return lastFrame && lastFrame.tabId === tabId ? lastFrame.dataUrl : null;
   }
 }

@@ -2,7 +2,7 @@
 // survives MV3 service-worker teardown (and correctly dies with the browser).
 // Handlers must rehydrate on every call — the SW itself is stateless.
 
-import type { SessionSnapshot, SessionStatus } from "../shared/messages";
+import type { SessionStatus } from "../shared/messages";
 
 const KEY = "session";
 
@@ -12,6 +12,8 @@ export interface SessionState {
   seq: number;
   stepCount: number;
   startedAt: number | null;
+  lastTabTitle: string | null;
+  lastAction: string | null;
 }
 
 export const IDLE: SessionState = {
@@ -20,22 +22,28 @@ export const IDLE: SessionState = {
   seq: 0,
   stepCount: 0,
   startedAt: null,
+  lastTabTitle: null,
+  lastAction: null,
 };
 
 export async function getState(): Promise<SessionState> {
   const stored = await chrome.storage.session.get(KEY);
-  return (stored[KEY] as SessionState | undefined) ?? IDLE;
+  return { ...IDLE, ...((stored[KEY] as Partial<SessionState> | undefined) ?? {}) };
 }
 
 export async function setState(state: SessionState): Promise<void> {
   await chrome.storage.session.set({ [KEY]: state });
 }
 
-export function snapshot(state: SessionState): SessionSnapshot {
+/** State-derived part of the popup snapshot (queue/error info is added by the SW). */
+export function snapshotBase(state: SessionState) {
   return {
     status: state.status,
     recordingId: state.recordingId,
     stepCount: state.stepCount,
+    startedAt: state.startedAt,
+    lastTabTitle: state.lastTabTitle,
+    lastAction: state.lastAction,
   };
 }
 
