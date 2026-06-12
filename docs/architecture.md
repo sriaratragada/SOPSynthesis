@@ -63,7 +63,7 @@ SOPSynthesis is a local-first, three-tier application:
 1. **Finalize recording**: `POST /api/recordings/{recording_id}/finalize`
 2. **Deduplication**: Filters out double-clicks (same click twice) and post-navigation click artifacts.
 3. **Description generation**: Template-based step text (no LLM) from element metadata and event type.
-4. **Sensitive data detection**: Flags steps whose captured text looks like an email, SSN (9 digits), or credit-card number (16 digits).
+4. **Sensitive data detection**: Flags steps whose captured text looks like an email, SSN in 123-45-6789 form, or 12–19 digit card numbers validated with the Luhn checksum.
 5. **Guide creation**: Stores guide metadata (title, description) and steps with full metadata for undo.
 
 #### Key Invariant: Normalized Coordinates
@@ -138,7 +138,7 @@ SOPSynthesis is a local-first, three-tier application:
    - Backend runs finalization: `POST /api/recordings/{id}/finalize`.
    - Dedup pipeline removes double-clicks and post-navigate artifacts.
    - For each surviving event, generates a step description using a template generator (reads element tag, text, event type, etc.).
-   - Creates `Guide` with `title` (from first page title) and `description` (empty, can be edited).
+   - Creates `Guide` with `title` (from first page title, formatted as "{first page title} — workflow") and `description` (generated, e.g. "Created from a 4-step recording on example.com, June 12, 2026.").
    - Creates `Step` records with normalized coordinates stored in `click` JSON field.
 5. **Web app fetches** `GET /api/guides/{guide_id}`:
    - For each step, the click's `nx`, `ny` are rendered as `left: nx*100%`, `top: ny*100%` over the screenshot image.
@@ -151,15 +151,14 @@ SOPSynthesis is a local-first, three-tier application:
 
 1. Backend's FastAPI framework auto-generates OpenAPI schema from Pydantic types.
 2. Run `npm run gen:types` to dump the schema and regenerate `packages/shared/src/api-types.gen.ts`.
-3. Web and extension import types from `packages/shared/src/api-types.gen.ts` (never hand-edit).
+3. Only the web app imports the generated types from `packages/shared/src/api-types.gen.ts`; the extension uses hand-written types in `extension/src/shared/` (they never cross the HTTP boundary unchecked, the event contract doc covers that shape).
 4. **This ensures type safety across the full stack.**
 
 ## Roadmap
 
-- **Phase 2** (planned): Extended screenshot editor (currently v1), more annotation types.
-- **Phase 3** (planned): HTML and PDF exports, GIF recording playback, share links.
-- **Phase 4** (planned): Workspace folders, search, Pages (multi-section guides).
-- **Phase 5** (planned): Sidekick (AI assistant for editing), Guide Me (interactive walkthroughs).
-- **Phase 6** (planned): Cloud sync, user accounts, team collaboration, enterprise features.
-
-**Phase 1** (current) focuses on the core capture, dedup, and local editing loop—everything runs on your machine, no cloud or accounts required.
+- **Phase 1 (shipped)** — Core capture loop: extension recording, dedup + description pipeline, viewer/editor, Markdown export.
+- **Phase 2 (shipped)** — Editing suite: screenshot editor (annotations, crop, move target), server-side redaction with derived images, rich-text instructions, duplicate/split/merge, branding, sensitive-data flagging.
+- **Phase 3 (planned)** — Sharing + exports: self-contained HTML export, PDF (Playwright print), GIF generation, shareable links.
+- **Phase 4 (planned)** — Workspace: folders, full-text search (SQLite FTS5), Pages (long-form documents embedding guides), comments.
+- **Phase 5 (planned)** — In-page delivery: Sidekick (browser side panel surfacing guides relevant to the current site) and Guide Me (interactive in-page walkthroughs); both share an element re-finding engine.
+- **Phase 6 (planned)** — Cloud + enterprise: accounts, sync, Postgres/S3 migration, SSO, RBAC, audit.

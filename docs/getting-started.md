@@ -80,7 +80,7 @@ You should see the SOPSynthesis extension icon in your toolbar.
 
 3. **Perform your task**: Use the website or application normally. Click buttons, type into forms, navigate between pages—SOPSynthesis captures it all. You can move across different domains; the extension maintains context.
 
-4. **Stop recording**: Click **Stop** in the extension popup (or close the popup and click the icon again).
+4. **Stop recording**: Click **Stop** in the extension popup.
 
 5. **View your guide**: A new browser tab opens showing your newly generated guide. It appears as a list of steps, each with an annotated screenshot and automatically-generated descriptive text.
 
@@ -89,30 +89,33 @@ You should see the SOPSynthesis extension icon in your toolbar.
 In the guide viewer, you can refine every aspect:
 
 ### Guide Metadata
-- **Title & Description**: Edit at the top of the page using the pencil icon.
+- **Title & Description**: Click the title or description text at the top of the page and type — changes save when you click away.
 
-### Step Operations (Click the ⋯ menu on any step)
-- **Rename / Edit text**: Click the step description to edit it with rich formatting (bold, italic, links).
-- **Drag to reorder**: Grab the step number on the left to reorder steps.
-- **Duplicate**: Creates a copy below the current step (useful for similar repeated actions).
-- **Split**: Breaks one step into two, sharing the same screenshot (for complex actions).
-- **Merge**: Combines two consecutive steps into one (the first keeps its screenshot).
-- **Delete**: Removes the step permanently.
+### Step Operations
+- **Edit text**: click the step description and type; a small toolbar (bold, italic, link) appears while editing. Saves when you click away.
+- **Drag to reorder**: grab the ⠿ handle on the left edge of a step and drag.
+- **Delete**: the ✕ button on the step.
+- **Regenerate text**: the ↻ button restores the auto-generated description.
+- **Add a note/callout**: the ✎ button opens the callout editor (Info / Warning / Caution).
+- **In the ⋯ menu**: **Edit screenshot**, **Duplicate**, **Split in two**, **Merge with next**.
+  - **Duplicate**: Creates a copy below the current step (useful for similar repeated actions).
+  - **Split**: Breaks one step into two, sharing the same screenshot (for complex actions).
+  - **Merge**: Combines two consecutive steps into one (the first keeps its screenshot).
 
 ### Screenshot Annotations
 1. Click **Edit screenshot** on any step to open the visual editor.
-2. **Draw**: Select arrows, boxes, ellipses, or text annotations. Click the canvas to place them.
-3. **Drag the click target**: The small red/colored circle shows where you clicked. Drag it to adjust if needed.
+2. **Draw**: Select a tool (arrows, boxes, ellipses, or text) and drag on the image to draw; text annotations are placed with a single click, which prompts for the text.
+3. **Move the click target**: Select the ◎ (Move click target) tool first, then drag the circle to adjust where you clicked.
 4. **Crop**: Use the crop tool to remove unnecessary parts of the screenshot.
 5. **Blur**: Select regions that contain sensitive information (passwords, credit cards, etc.) and blur them. Blurring creates a pixelated version on export while keeping the original untouched and undoable.
-6. **Save**: Click outside the editor or press Escape to close.
+6. **Save**: click the **Save** button to keep your changes. Pressing Escape or clicking **Cancel** discards them.
 
 ### Sensitive Data Detection
 - Steps with text that *might* contain an email, SSN, or credit card number are flagged with a yellow **"may contain sensitive data"** badge.
 - You can either manually blur those regions using the screenshot editor, or dismiss the badge if it's a false positive.
 
 ### Adding Callouts and Notes
-- Click **+ Add callout** in the menu to insert an info box, warning, or caution note at that step.
+- Click the ✎ button on a step to insert an info box, warning, or caution note.
 - Useful for highlighting important details or gotchas.
 
 ## Exporting Your Guide
@@ -127,8 +130,8 @@ Click the **Export Markdown** button at the top of the guide.
 
 Click **Settings** (gear icon) to customize:
 
-- **Marker color**: Choose the color for click targets and annotations (default: red).
-- **Logo**: Upload a PNG, JPG, or WebP logo to be included in exported guides and the viewer interface.
+- **Marker color**: Choose the color for click targets, step numbers, and exported images (default: orange #FF5C35). Annotation shapes have their own per-shape color chosen in the screenshot editor.
+- **Logo**: Upload a PNG, JPG, or WebP logo. The logo appears in the web app header.
 
 ## Troubleshooting
 
@@ -138,9 +141,6 @@ Click **Settings** (gear icon) to customize:
 ### Guide didn't open after stopping recording
 - Check that the web app is running on http://localhost:5173 (Terminal 2).
 - Check the browser console for errors (press F12 → Console tab).
-
-### Screenshots look distorted or cut off
-- This can happen if your browser zoom is not at 100%. Set it to 100% and try recording again.
 
 ### Deleting all your data
 - All guides and recordings are stored in the `data/` folder.
