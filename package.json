@@ -1,0 +1,19 @@
+{
+  "name": "sopsynthesis",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "web",
+    "extension",
+    "packages/*"
+  ],
+  "scripts": {
+    "gen:types": "node scripts/gen-types.mjs",
+    "dev:web": "npm run dev -w web",
+    "build:web": "npm run build -w web",
+    "build:ext": "npm run build -w extension"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.6.1"
+  }
+}

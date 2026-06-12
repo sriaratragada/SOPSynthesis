@@ -1,0 +1,26 @@
+# Data (local-first storage: SQLite DB + screenshots)
+data/
+*.db
+*.db-journal
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Generated intermediates
+openapi.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

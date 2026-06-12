@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>SOPSynthesis</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --accent: #ff5c35;
+        --danger: #d93025;
+      }
+      body {
+        width: 260px;
+        margin: 0;
+        padding: 16px;
+        font-family: system-ui, sans-serif;
+        font-size: 14px;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 15px;
+      }
+      .health {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 12px;
+        font-size: 12px;
+        opacity: 0.85;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #999;
+      }
+      .dot.up { background: #1e8e3e; }
+      .dot.down { background: var(--danger); }
+      button {
+        width: 100%;
+        padding: 10px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #fff;
+        background: var(--accent);
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      button.stop { background: var(--danger); }
+      .counter {
+        margin-top: 10px;
+        font-size: 12px;
+        text-align: center;
+        opacity: 0.85;
+      }
+      .error {
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--danger);
+      }
+      .hidden { display: none; }
+    </style>
+  </head>
+  <body>
+    <h1>SOPSynthesis</h1>
+    <div class="health">
+      <span id="health-dot" class="dot"></span>
+      <span id="health-text">Checking backend…</span>
+    </div>
+    <button id="toggle" disabled>Start recording</button>
+    <div id="counter" class="counter hidden"></div>
+    <div id="error" class="error hidden"></div>
+    <script type="module" src="/src/popup/main.ts"></script>
+  </body>
+</html>
